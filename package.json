@@ -1,0 +1,15 @@
+{
+  "name": "checkout-service",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local in-memory checkout API for AI coding-agent training (no cloud, no DB, no Docker).",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
