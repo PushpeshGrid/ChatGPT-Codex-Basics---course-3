@@ -1,0 +1,42 @@
+[
+  {
+    "id": "ord-1",
+    "userId": "guest",
+    "items": [
+      {
+        "productId": "prod-001",
+        "name": "Enamel Mug",
+        "quantity": 2,
+        "unitPrice": 12.5
+      }
+    ],
+    "subtotal": 25,
+    "discount": 0,
+    "total": 25,
+    "status": "confirmed",
+    "createdAt": "2026-09-28T10:41:52.854Z"
+  },
+  {
+    "id": "ord-2",
+    "userId": "guest",
+    "items": [
+      {
+        "productId": "prod-002",
+        "name": "Canvas Tote",
+        "quantity": 1,
+        "unitPrice": 18
+      },
+      {
+        "productId": "prod-003",
+        "name": "Wool Beanie",
+        "quantity": 1,
+        "unitPrice": 22.75
+      }
+    ],
+    "subtotal": 40.75,
+    "discount": 0,
+    "total": 40.75,
+    "status": "confirmed",
+    "createdAt": "2026-09-28T10:42:41.530Z"
+  }
+]

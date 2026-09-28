@@ -15,6 +15,24 @@ export interface CheckoutResult {
   total: number;
 }
 
+export interface OrderItem {
+  productId: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface OrderResult {
+  id: string;
+  userId: string;
+  items: OrderItem[];
+  subtotal: number;
+  discount: number;
+  total: number;
+  status: string;
+  createdAt: string;
+}
+
 export interface ValidationError {
   error: string;
 }
@@ -100,4 +118,40 @@ export function calculateCheckout(request: CheckoutRequest): CheckoutResult {
   const total = subtotal - discount;
 
   return { total };
+}
+
+export function buildOrder(
+  id: string,
+  request: CheckoutRequest
+): OrderResult {
+  const items: OrderItem[] = [];
+  let subtotal = 0;
+
+  for (const item of request.items) {
+    const product = getProductById(item.productId);
+    if (product) {
+      const itemTotal = product.price * item.quantity;
+      subtotal += itemTotal;
+      items.push({
+        productId: product.id,
+        name: product.name,
+        quantity: item.quantity,
+        unitPrice: product.price,
+      });
+    }
+  }
+
+  const discount = calculateDiscount(subtotal);
+  const total = subtotal - discount;
+
+  return {
+    id,
+    userId: request.userId,
+    items,
+    subtotal,
+    discount,
+    total,
+    status: "confirmed",
+    createdAt: new Date().toISOString(),
+  };
 }

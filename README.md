@@ -2,7 +2,7 @@
 
 A small Next.js e-commerce checkout application for AI coding-agent training.
 
-**No cloud services, no database, no Docker. State is stateless per request.**
+**No cloud services (PostgreSQL, MongoDB, Firebase, etc.), no Docker. Orders are persisted locally in `data/orders.json` using Node.js file-system APIs.**
 
 ## Prerequisites
 
@@ -47,6 +47,9 @@ Tests validate:
 - Checkout validation rejects invalid quantities, unknown products, empty carts, and invalid userIds
 - Checkout calculation uses server-side prices (not client-supplied)
 - The total is correctly computed as `subtotal - calculateDiscount(subtotal)`
+- Order objects contain correct structure (id, userId, items, subtotal, discount, total, status, createdAt)
+- Order items include product name and unit price
+- Orders are persisted to `data/orders.json`
 
 ## API Endpoints
 
@@ -63,10 +66,7 @@ Returns an array of three hard-coded products (server-side catalogue).
   { "id": "prod-003", "name": "Wool Beanie", "price": 22.75 }
 ]
 ```
-
-### POST /api/checkout
-
-Validates a checkout request and calculates the total.
+, creates an order, and persists it to `data/orders.json`.
 
 **Request:**
 
@@ -88,11 +88,31 @@ Validates a checkout request and calculates the total.
 - All `productId`s must exist in the catalogue.
 - Rejects: malformed JSON, invalid types, zero/negative/fractional quantities, unknown products, empty carts, empty userId.
 
-**Success Response (HTTP 200):**
+**Success Response (HTTP 200) — Order Object:**
 
 ```json
 {
-  "total": 30.5
+  "id": "ord-1",
+  "userId": "guest",
+  "items": [
+    {
+      "productId": "prod-001",
+      "name": "Enamel Mug",
+      "quantity": 1,
+      "unitPrice": 12.5
+    },
+    {
+      "productId": "prod-002",
+      "name": "Canvas Tote",
+      "quantity": 2,
+      "unitPrice": 18.0
+    }
+  ],
+  "subtotal": 48.5,
+  "discount": 0,
+  "total": 48.5,
+  "status": "confirmed",
+  "createdAt": "2026-09-28T12:34:56.789Z"
 }
 ```
 
@@ -100,6 +120,39 @@ Validates a checkout request and calculates the total.
 
 ```json
 {
+  "error": "quantity must be a positive integer"
+}
+```
+
+### GET /api/orders
+
+Returns the array of all orders persisted in `data/orders.json`.
+
+**Response (HTTP 200):**
+
+```json
+[
+  {
+    "id": "ord-1",
+    "userId": "guest",
+    "items": [
+      {
+        "productId": "prod-001",
+        "name": "Enamel Mug",
+        "quantity": 1,
+        "unitPrice": 12.5
+      }
+    ],
+    "subtotal": 12.5,
+    "discount": 0,
+    "total": 12.5,
+    "status": "confirmed",
+    "createdAt": "2026-09-28T12:34:56.789Z"
+  }
+]
+```
+
+If no orders have been created, returns `[]`.
   "error": "quantity must be a positive integer"
 }
 ```
@@ -150,6 +203,8 @@ checkout-service/
 ├── tsconfig.json         # TypeScript configuration
 ├── next.config.ts        # Next.js configuration
 ├── .gitignore            # Ignored files
+├── data/
+│   └── orders.json       # Persisted orders (file-system only)
 └── src/
     ├── app/
     │   ├── layout.tsx           # Root layout
@@ -158,11 +213,13 @@ checkout-service/
     │   ├── checkout/page.tsx    # Checkout page
     │   └── api/
     │       ├── products/route.ts    # GET /api/products
-    │       └── checkout/route.ts    # POST /api/checkout
+    │       ├── checkout/route.ts    # POST /api/checkout
+    │       └── orders/route.ts      # GET /api/orders
     └── lib/
         ├── pricing.ts           # Discount calculation (stub)
         ├── products.ts          # Product catalogue
-        ├── checkout.ts          # Validation and totals
+        ├── checkout.ts          # Validation and order building
+        ├── orders.ts            # Order persistence (file-system)
         └── pricing.test.ts      # Tests
 ```
 
@@ -176,7 +233,7 @@ No cents, no minor units, no decimal libraries.
 **Do not add:**
 
 - Authentication or user accounts
-- Database or persistent storage
+- Database systems (PostgreSQL, MongoDB, Firebase, Supabase, Redis, etc.)
 - Docker or cloud deployment
 - External services or APIs
 - Payment processing
@@ -184,11 +241,16 @@ No cents, no minor units, no decimal libraries.
 - CSS-in-JS libraries
 - Additional production dependencies
 
+**Allowed:**
+
+- Order persistence via `data/orders.json` using Node.js `fs` APIs
+- Basic file operations for storing order data
+
 **Important:**
 
 - The pricing module (`src/lib/pricing.ts`) is protected. Any changes require explicit human approval.
 - All prices come from the server-side catalogue; client-supplied prices are ignored.
-- The checkout is stateless; no session or cart persistence.
+- Orders are persisted locally in `data/orders.json` using file-system APIs (not a database).
 
 ## Example Workflow
 
@@ -209,7 +271,12 @@ Before declaring work complete:
 - [ ] Home page loads and displays
 - [ ] Checkout page loads and shows three products
 - [ ] GET `/api/products` returns exactly three products
-- [ ] POST `/api/checkout` accepts valid carts and returns `{ total }`
+- [ ] POST `/api/checkout` accepts valid carts and returns order object
+- [ ] Order object contains: id, userId, items, subtotal, discount, total, status, createdAt
+- [ ] Order items contain: productId, name, quantity, unitPrice
+- [ ] GET `/api/orders` returns array of persisted orders
+- [ ] Orders are stored in `data/orders.json` (checked with file-system)
+- [ ] Multiple checkouts create multiple orders with incrementing IDs
 - [ ] Invalid quantities (0, negative, fractional) are rejected (HTTP 400)
 - [ ] Unknown product IDs are rejected (HTTP 400)
 - [ ] Empty cart is rejected (HTTP 400)
@@ -217,7 +284,7 @@ Before declaring work complete:
 - [ ] Malformed JSON is rejected (HTTP 400)
 - [ ] Totals use server-side prices, not client input
 - [ ] No secrets, API keys, or real personal data
-- [ ] No Tailwind, Material UI, Bootstrap, CSS-in-JS, authentication, or database
+- [ ] No Tailwind, Material UI, Bootstrap, CSS-in-JS, authentication, or database (PostgreSQL/MongoDB/Firebase)
 - [ ] `src/lib/pricing.ts` contains only the approved stub
 
 ## Questions?

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { validateCheckout, calculateCheckout } from "@/lib/checkout";
+import { validateCheckout, buildOrder } from "@/lib/checkout";
+import { getOrders, createOrder, generateOrderId } from "@/lib/orders";
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,10 +14,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = calculateCheckout(validation.data);
-    return NextResponse.json(result);
+    // Get existing orders to generate next ID
+    const existingOrders = await getOrders();
+    const orderId = generateOrderId(existingOrders);
+
+    // Build order object
+    const order = buildOrder(orderId, validation.data);
+
+    // Persist order
+    await createOrder(order);
+
+    // Return order object
+    return NextResponse.json(order);
   } catch (error) {
-    // Malformed JSON
+    // Malformed JSON or file system error
     return NextResponse.json(
       { error: "Invalid JSON in request body" },
       { status: 400 }

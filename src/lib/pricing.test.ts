@@ -5,6 +5,7 @@ import { getProducts, getProductById } from "./products.ts";
 import {
   validateCheckout,
   calculateCheckout,
+  buildOrder,
 } from "./checkout.ts";
 
 describe("pricing", () => {
@@ -164,5 +165,57 @@ describe("checkout calculation", () => {
     });
     // discount should be 0, so total = 22.75 - 0 = 22.75
     assert.equal(result.total, 22.75);
+  });
+});
+
+describe("order building", () => {
+  test("builds order with correct shape", () => {
+    const order = buildOrder("ord-1", {
+      userId: "guest",
+      items: [{ productId: "prod-001", quantity: 1 }],
+    });
+
+    assert.equal(order.id, "ord-1");
+    assert.equal(order.userId, "guest");
+    assert.equal(order.status, "confirmed");
+    assert.equal(order.subtotal, 12.5);
+    assert.equal(order.discount, 0);
+    assert.equal(order.total, 12.5);
+    assert.ok(order.createdAt);
+    assert.ok(order.createdAt.match(/^\d{4}-\d{2}-\d{2}T/)); // ISO 8601
+  });
+
+  test("builds order items with product name and unit price", () => {
+    const order = buildOrder("ord-2", {
+      userId: "guest",
+      items: [
+        { productId: "prod-001", quantity: 2 },
+        { productId: "prod-002", quantity: 1 },
+      ],
+    });
+
+    assert.equal(order.items.length, 2);
+    assert.equal(order.items[0].productId, "prod-001");
+    assert.equal(order.items[0].name, "Enamel Mug");
+    assert.equal(order.items[0].quantity, 2);
+    assert.equal(order.items[0].unitPrice, 12.5);
+    assert.equal(order.items[1].productId, "prod-002");
+    assert.equal(order.items[1].name, "Canvas Tote");
+    assert.equal(order.items[1].quantity, 1);
+    assert.equal(order.items[1].unitPrice, 18.0);
+  });
+
+  test("calculates order total correctly in order object", () => {
+    const order = buildOrder("ord-3", {
+      userId: "guest",
+      items: [
+        { productId: "prod-001", quantity: 1 }, // 12.5
+        { productId: "prod-002", quantity: 1 }, // 18.0
+      ],
+    });
+
+    assert.equal(order.subtotal, 30.5);
+    assert.equal(order.discount, 0);
+    assert.equal(order.total, 30.5);
   });
 });

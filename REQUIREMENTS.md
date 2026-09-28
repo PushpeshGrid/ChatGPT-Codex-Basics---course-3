@@ -39,7 +39,7 @@ Work inside the current repository.
 
 **Styling:** Plain inline styles **or** one global CSS file. System font. One accent color. Rounded cards or buttons. Centered max-width container. Consistent spacing. Simple and clean.
 
-**Do not add:** Tailwind CSS, Material UI, Bootstrap, any component library, CSS-in-JS, authentication, database, Docker, external services, payment provider, cloud services, external persistence, unrelated frameworks, unnecessary production dependencies.
+**Do not add:** Tailwind CSS, Material UI, Bootstrap, any component library, CSS-in-JS, authentication, database (PostgreSQL, MongoDB, Firebase, etc.), Docker, external services, payment provider, cloud services, unrelated frameworks, unnecessary production dependencies. File-system persistence via `data/orders.json` is explicitly permitted for this task.
 
 ## Money representation
 
@@ -67,7 +67,7 @@ Return **exactly three** hard-coded **server-side** products:
 
 ## Checkout API
 
-`POST /api/checkout`
+### POST /api/checkout
 
 Expected request body:
 
@@ -80,7 +80,7 @@ Expected request body:
 
 (`quantity: 0` in the example is illustrative of the field, not a valid value.)
 
-### Validation
+#### Validation
 
 1. `userId` must be a non-empty string.
 2. `items` must be a non-empty array.
@@ -94,15 +94,69 @@ Expected request body:
 10. `subtotal` = sum of `unitPrice * quantity` for every item.
 11. `total` = `subtotal - calculateDiscount(subtotal)`.
 12. Baseline `calculateDiscount` returns `0`, so `total` equals `subtotal`.
-13. Successful checkout returns HTTP **200** with `{ "total": number }` only. Do not invent extra success fields unless a later requirement says so.
+
+#### Persistence
+
+13. On successful validation, create an order object and persist it to `data/orders.json` using Node.js file-system APIs.
+14. Do not use a database (PostgreSQL, MongoDB, Firebase, etc.). Use only `data/orders.json`.
+15. Successful checkout returns HTTP **200** with the order object containing:
+    - `id`: unique order identifier (string, e.g., `"ord-1"`)
+    - `userId`: from the request
+    - `items`: array of order items (see item shape below)
+    - `subtotal`: calculated subtotal (floating-point dollars)
+    - `discount`: calculated discount (floating-point dollars)
+    - `total`: calculated total (floating-point dollars)
+    - `status`: order status (e.g., `"confirmed"`)
+    - `createdAt`: ISO 8601 timestamp string
+
+#### Order Item Shape
+
+Each item in the `items` array must contain:
+- `productId`: product ID from the catalogue
+- `name`: product name (from server-side catalogue)
+- `quantity`: quantity ordered (positive integer)
+- `unitPrice`: unit price at time of order (floating-point dollars, from server-side catalogue)
+
+### GET /api/orders
+
+Returns the current array of all orders persisted in `data/orders.json`.
+
+**Response (HTTP 200):**
+
+```json
+[
+  {
+    "id": "ord-1",
+    "userId": "guest",
+    "items": [
+      {
+        "productId": "prod-001",
+        "name": "Enamel Mug",
+        "quantity": 1,
+        "unitPrice": 12.5
+      }
+    ],
+    "subtotal": 12.5,
+    "discount": 0,
+    "total": 12.5,
+    "status": "confirmed",
+    "createdAt": "2026-09-28T12:34:56.789Z"
+  }
+]
+```
+
+If `data/orders.json` does not exist or is empty, return `[]`.
 
 ## Sensitive pricing module
 
 `src/lib/pricing.ts` must contain **only** this no-op stub:
-
-```ts
-export function calculateDiscount(_subtotal: number): number {
-  return 0;
+data/
+│   └── orders.json          # Persisted orders (file-system only, no database)
+├── src/app/page.tsx
+├── src/app/checkout/page.tsx
+├── src/app/api/products/route.ts
+├── src/app/api/checkout/route.ts
+├── src/app/api/orders
 }
 ```
 
@@ -203,11 +257,13 @@ Before calling the work complete:
 npm install
 npm run build
 npm run test:ci
-npm run dev
+npm run devcontains order object with id, userId, items, subtotal, discount, total, status, createdAt; GET /api/orders returns array of persisted orders; orders are stored in data/orders.json (not a database); no
 ```
 
 Then verify: home loads; checkout link works; checkout page loads; products endpoint returns exactly three products; valid checkout succeeds; total from server-side prices; invalid quantities / unknown IDs / empty cart / invalid userId rejected; invalid input is HTTP 400; success JSON shape is `{ "total": number }`; no database, auth, external services, Docker, Tailwind, or component library; `pricing.ts` is still only the approved stub; README matches behavior.
+ (PostgreSQL, MongoDB, Firebase, Supabase, Redis, etc.), payments, Stripe, Docker, Kubernetes, cloud deployment, analytics, logging platforms, admin panel, product/inventory management, email, notifications, real discount engine, advanced checkout.
 
+Note: File-system persistence via `data/orders.json` is explicitly required for order storage and is not considered "database."
 ## Out of scope (do not invent)
 
 Authentication, user accounts, database, persistent orders, payments, Stripe, Firebase, Supabase, Redis, Docker, Kubernetes, cloud deployment, analytics, logging platforms, admin panel, product/inventory management, email, notifications, real discount engine, advanced checkout.
